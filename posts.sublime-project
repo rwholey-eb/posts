@@ -1,0 +1,17 @@
+{
+	"folders":
+	[
+		{
+			"path": "."
+		}
+	],
+   "build_systems":
+   [
+      {
+         "name": "posts",
+         "cmd": ["./sync.sh"],
+         "working_dir": "${project_path}",
+         "shell": true
+      }
+   ]
+}

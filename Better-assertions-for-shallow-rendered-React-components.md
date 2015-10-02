@@ -145,5 +145,3 @@ jasmine.addMatchers({
 ```
 
 In conclusion, try to write your shallow-render tests the way you'd write tests using `TestUtils.findAllInRenderedTree` etc, but use utilities which do the same thing for shallow-rendered trees as the TestUtils do for rendered DOM components.
-
-
