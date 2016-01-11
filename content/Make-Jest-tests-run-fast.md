@@ -24,11 +24,11 @@ Additionally, all the Javascript we're interested in testing resides in a couple
 
 Finally, if all of your testable JS lives in a subdirectory of your project repo, make sure you set a custom `rootDir`, to further scope Jest's file-finding.
 
-## Use persistModuleRegistryBetweenSpecs
+## Don't have lots of it() blocks
 
-Jest has an undocumented config option called `persistModuleRegistryBetweenSpecs`, which skips reloading the module registry between individual test cases (`it` blocks) in a test file. If you write your tests in the Jasmine/RSpec style where a seperate `it` block is used for each assertion, this can make a huge improvement to test run time, as the time spent reloading all those modules between each testcase adds up fast.
+If you write your tests in the Jasmine/RSpec style where a seperate `it` block is used for each assertion, your tests will take a lot longer to run, as the module registry is reloaded for each testcase (each `it` block), and the time spent reloading all those modules between each testcase adds up fast.
 
-An important thing to note about changing this setting is that it might require adjusting your tests slightly. As modules will now be only reloaded once at the start of each test file, if a test makes assertions on the number of times a mock function was called, or asserts on a specifically numbered mock call, you'll need to add a call to eg. `yourMockFunction.mockClear()` in the `beforeEach` block for the test, to make sure that the relevent mock is reset between testcases.
+If you like the look of lots of `it` blocks, write a test helper which allows you to seperate assertions into blocks, but doesn't actually cause a seperate Jest context to be created.
 
 ## Use compiled versions of big dependencies
 
