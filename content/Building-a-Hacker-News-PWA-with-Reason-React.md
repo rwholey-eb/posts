@@ -8,10 +8,12 @@ If you haven't done so, you probably also need to [install the Reason CLI tools]
 
 ### A new project
 
-We're going to use [create-reason-react-app](https://github.com/knowbody/crra), which is just a git repo which we can clone and use as the starting point for our app:
+We're going to use [create-reason-react-app](https://github.com/knowbody/crra), which will create a starting point for our app:
+
+With Yarn
 
 ```bash
-git clone https://github.com/knowbody/crra.git reason-hn
+yarn create reason-react-app reason-hn
 cd reason-hn
 # install dependencies: the reason-to-js compiler (bucklescript), webpack, react and more
 yarn install
@@ -19,11 +21,23 @@ yarn install
 yarn start
 ```
 
+With npm
+
+```bash
+npm install -g create-reason-react-app
+create-reason-react-app reason-hn
+cd reason-hn
+# install dependencies: the reason-to-js compiler (bucklescript), webpack, react and more
+npm install
+# starts 'bsb' which compiles reason to js, and also webpack-dev-server, in parallel
+npm start
+```
+
 I'll go into more detail about what's going on under the hood later, right now we just want to get something on the screen.
 
 Open http://localhost:8080 and you should see this:
 
-![Create Reason React App](/files/crra.png)
+![Screenshot of Create Reason React App blank slate](/files/crra.png)
 
 This page is being rendered using React, from a component written in Reason. In your editor, open the project folder and open up `src/index.re`. If you've built many React apps this should look pretty familiar. The Reason code:
 
@@ -46,7 +60,11 @@ ReactDOM.render(<App title="Welcome to Create Reason React App!" />, document.ge
   myFunctionB (myFunctionA arg1 arg2) arg3
   ```
 
-  This would call myFunctionA with arg1 and arg2, and then call myFunctionB with the result of myFunctionA and also arg3.
+  which is equivalent to this Javascript:
+
+  ```js
+  myFunctionB(myFunctionA(arg1, arg2), arg3)
+  ```
 </aside>
 
 ### JSX in Reason
@@ -63,7 +81,7 @@ Let's start making some changes. We're going to start building the front page of
     </div>;
 ```
 
-In Reason React, things are a bit more explicit than normal Javascript React. Reason's JSX doesn't support using text directly between JSX tags, instead we use a string and pass it to a function to turn it into a React element (aptly named `ReactRe.stringToElement`). In Reason strings are always double quoted. Finally, we wrap it in parens so that Reason knows that `"Reason React Hacker News"` is an argument to `ReactRe.stringToElement`, but the following `</h1>` is not.
+In Reason React, some things are a bit more explicit than normal Javascript React. Reason's JSX doesn't support displaying text by simply putting it directly between JSX tags, instead we use a function called `ReactRe.stringToElement` and pass it a string of the text we want to display: `"Reason React Hacker News"`. In Reason strings are always double quoted. Finally, we wrap it in parens so that Reason knows that `"Reason React Hacker News"` is an argument to `ReactRe.stringToElement`, but the following `</h1>` is not.
 
 You can think of the above code as being equivalent to this Javascript JSX:
 
@@ -81,14 +99,16 @@ render() {
 
 Save your changes. Now, take a look in your browser. You should see this:
 
-If you don't see any change, it's possible that you have a syntax error. Errors won't show in the browser, just in the editor and `yarn start` command output.
+![Screenshot with Header only](/files/hn-re-header.png)
+
+If you don't see any change, it's possible that you have a syntax error. Errors won't show in the browser, just in the editor and `yarn start`/`npm start` command output.
 
 <aside>
 Debugging syntax errors
 
 If you're new to Reason, it can be a bit difficult to spot where exactly you've made a syntax error. This is especially true with the current editor integrations for Atom and VS Code, because they sometimes display an error further down in the file than where the incorrect piece of syntax is.
 
-If the first error message in the file is 'Invalid token', you're dealing with a syntax error somewhere prior to that location. As an alternative to this editor error message, you can take a look at the terminal output of the `yarn start` command. Scroll back until you see something like `<SYNTAX ERROR>`. On the preceeding line there will be a file, line and character position, which should be the location of the actual syntax error.
+If the first error message in the file is 'Invalid token', you're dealing with a syntax error somewhere prior to that location. You can take a look at the terminal output of the `yarn start`/`npm start` command to find where exactly the error is. Scroll back through the output until you see something like `<SYNTAX ERROR>`. On the preceeding line there will be a file, line and character position, which should be the location of the actual syntax error. As Reason editor integration improves this should no longer be necessary.
 </aside>
 
 ### A record type
@@ -245,8 +265,8 @@ To use these newly installed BuckleScript packages we need to let BuckleScript k
   "bs-dependencies": [
     "reason-react",
     "bs-director",
-    "bs-fetch",
-    "bs-json"
+    "bs-fetch", // add this
+    "bs-json" // and this too
   ],
   "sources": [
     {
@@ -256,11 +276,53 @@ To use these newly installed BuckleScript packages we need to let BuckleScript k
 }
 ```
 
-You'll need to kill and restart your `yarn start` command so that `bsb` (the BuckleScript build system) can pick up the changes to `.bsconfig`.
+You'll need to kill and restart your `yarn start`/`npm start` command so that `bsb` (the BuckleScript build system) can pick up the changes to `.bsconfig`.
 
 ### Reading JSON
 
-Now we've installed `bs-json` we can use it to read JSON and turn it into 
+Now we've installed `bs-json` we can use `Json.Decode` to read JSON and turn it into a `StoryData.topstory` record.
+
+In `StoryData.re`:
+```reason
+let parseTopStory json :topstory =>
+  {
+    by: Json.Decode.field "by" Json.Decode.string json,
+    descendants: Json.Decode.field "descendants" Json.Decode.int json,
+    id: Json.Decode.field "id" Json.Decode.int json,
+    score: Json.Decode.field "score" Json.Decode.int json,
+    time: Json.Decode.field "time" Json.Decode.int json,
+    title: Json.Decode.field "title" Json.Decode.string json,
+    url: Json.Decode.optional (Json.Decode.field "url" Json.Decode.string) json
+  };
+```
+
+This defines a function called `parseTopStory` which takes one argument called `json` and returns a value of the type `topstory`. But what is this `Json.Decode.{` syntax? In Reason it's common to use a lot of functions from a particular module together. However, referring to the module name over and over again makes our code repetitive and unclear
+
+let parseTopStory json :topstory =>
+  {
+    by: Json.Decode.field "by" Json.Decode.string json,
+    descendants: Json.Decode.field "descendants" Json.Decode.int json,
+    id: Json.Decode.field "id" Json.Decode.int json,
+    /* ...you get the idea */
+```
+
+
+Now let's test it out by adding some code which defines a string of JSON and uses our `parseTopStory`
+```reason
+let aTopStoryJSON = "{
+  \"by\": \"jsdf\",
+  \"descendants\": 32,
+  \"id\": 123,
+  \"score\": 200,
+  \"time\": 1497034333,
+  \"title\": \"PCE.js - classic mac emulator\",
+  \"url\": \"https://jamesfriend.com.au/pce-js/\"
+}";
+
+let aTopStory = parseTopStory aTopStoryJSON;
+
+Js.log aTopStory.by; /* prints 'jsdf' to the browser console */
+```
 
 
 ### Fetching data
