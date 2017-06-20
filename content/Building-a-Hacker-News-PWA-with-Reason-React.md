@@ -280,30 +280,70 @@ You'll need to kill and restart your `yarn start`/`npm start` command so that `b
 
 ### Reading JSON
 
-Now we've installed `bs-json` we can use `Json.Decode` to read JSON and turn it into a `StoryData.topstory` record.
+Now we've installed `bs-json` we can use `Json.Decode` to read JSON and turn it into a record.
+
+We'll start by just reading a single field from some JSON data.
+
+In `index.re`:
+```reason
+type myrecord = {
+  by: string,
+};
+
+let parseRecord json :myrecord =>
+  {
+    by: Json.Decode.field "by" Json.Decode.string json,
+  };
+```
+
+This defines a function called `parseRecord` which takes one argument called `json` and returns a value of the type `myRecord`. The `Json.Decode` module provides a bunch of functions which we are composing together to extract the fields of the JSON, and assert that the values we're getting are of the correct type.
+
+
+Now let's test it out by adding some code which defines a string of JSON and uses our `parseRecord` to log the value of the `by` field to the browser console. Note that I've escaped the doublequote characters in the JSON string. Reason does have [other string literal syntaxes which don't require escaping quotes](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_annotations_for_unicode_and_js_ffi_support), but I'll leave those for another time.
+```reason
+let aRecordJSON = "{\"by\": \"jsdf\"}";
+
+let aRecord = parseRecord aRecordJSON;
+
+Js.log aRecord.by; /* prints 'jsdf' to the browser console */
+```
+
+However, it's looking a bit wordy. Do we really have to write `Json.Decode` over and over again?
+
+Nope, Reason has some handy syntax to help us when we need to refer to the exports of a particular module over and over again. One option is to 'open' the module, which means that all of its exports become available in the current scope, so we can ditch the `Json.Decode` qualifier:
+
+```reason
+open Json.Decode;
+
+let parseRecord json :myrecord =>
+  {
+    by: field "by" string json,
+  };
+```
+
+However, maybe we just want to open up a module temporarily for one expression. Reason has a syntax for that too; just put the module name, followed by a `.` before the expression:
+
+```reason
+let parseRecord json :myrecord =>
+  Json.Decode.{
+    by: field "by" string json,
+  };
+```
+
+A complete decoder function for our `StoryData.topstory` record type:
 
 In `StoryData.re`:
 ```reason
 let parseTopStory json :topstory =>
-  {
-    by: Json.Decode.field "by" Json.Decode.string json,
-    descendants: Json.Decode.field "descendants" Json.Decode.int json,
-    id: Json.Decode.field "id" Json.Decode.int json,
-    score: Json.Decode.field "score" Json.Decode.int json,
-    time: Json.Decode.field "time" Json.Decode.int json,
-    title: Json.Decode.field "title" Json.Decode.string json,
-    url: Json.Decode.optional (Json.Decode.field "url" Json.Decode.string) json
+  Json.Decode.{
+    by: field "by" string json,
+    descendants: field "descendants" int json,
+    id: field "id" int json,
+    score: field "score" int json,
+    time: field "time" int json,
+    title: field "title" string json,
+    url: optional (field "url" string) json
   };
-```
-
-This defines a function called `parseTopStory` which takes one argument called `json` and returns a value of the type `topstory`. But what is this `Json.Decode.{` syntax? In Reason it's common to use a lot of functions from a particular module together. However, referring to the module name over and over again makes our code repetitive and unclear
-
-let parseTopStory json :topstory =>
-  {
-    by: Json.Decode.field "by" Json.Decode.string json,
-    descendants: Json.Decode.field "descendants" Json.Decode.int json,
-    id: Json.Decode.field "id" Json.Decode.int json,
-    /* ...you get the idea */
 ```
 
 
