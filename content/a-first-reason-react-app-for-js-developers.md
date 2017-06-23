@@ -2,13 +2,13 @@ We're going to build a small single page web app to put Reason React through its
 
 ### Before we get started
 
-Make sure you have your editor set up for Reason. You're not getting the full benefit of a statically typed language if you haven't got type information, inline errors and autocomplete in your editor. For a quick editor setup, I can recommend [Atom packages described on the Reason website](http://facebook.github.io/reason/tools.html#editor-integration-atom), with the addition of my package [linter-refmt](https://atom.io/packages/linter-refmt) which integrates much better syntax error messages with Atom. Without this, you'll have to look at the compiler console output to debug some syntax errors.
+Make sure you have your editor set up for Reason. You're not getting the full benefit of a statically typed language if you haven't got type information, inline errors and autocomplete in your editor. For a quick editor setup, I can recommend [Atom packages described on the Reason website]a(http://facebook.github.io/reason/tools.html#editor-integration-atom), with the addition of my package [linter-refmt](https://atom.io/packages/linter-refmt) which integrates much better syntax error messages with Atom. Without this, you'll have to look at the compiler console output to debug some syntax errors.
 
 If you haven't done so, you probably also need to install the Reason CLI tools.
 
-**There is a newly released of the Reason CLI tools which is required to use this tutorial.**
+**There is a newly released version of the Reason CLI tools which is required to use this tutorial.**
 
-You can find install instructions [here](https://github.com/reasonml/reason-cli#1-install-reason-cli-globally). If you are on macOS and have npm, all you have to do is:
+You can find install instructions [here](https://github.com/reasonml/reason-cli#1-install-reason-cli-globally). If you are on macOS and have npm, all you need to do to install the tools is:
 
 ```bash
 npm install -g https://github.com/reasonml/reason-cli/archive/beta-v-1.13.6-bin-darwin.tar.gz
@@ -17,8 +17,6 @@ npm install -g https://github.com/reasonml/reason-cli/archive/beta-v-1.13.6-bin-
 ### A new project
 
 We're going to use [create-reason-react-app](https://github.com/knowbody/crra), which will create a starting point for our app:
-
-With npm
 
 ```bash
 npm install -g create-reason-react-app
@@ -30,7 +28,7 @@ npm install
 npm start
 ```
 
-If you're using [yarn](yarnpkg.com) you instead do:
+If you're using [yarn](yarnpkg.com) you can instead do:
 
 ```bash
 yarn create reason-react-app github-reason-list
@@ -120,7 +118,7 @@ Debugging syntax errors
 
 If you're new to Reason, it can be a bit difficult to spot where exactly you've made a syntax error. This is especially true with some of the current editor integrations, because they sometimes display an error further down in the file than where the incorrect piece of syntax is.
 
-If the first error message in the file is 'Invalid token', you're dealing with a syntax error. You can take a look at the terminal output of the `yarn start`/`npm start` command, which should show a more helpful error message including the file, line and character position of the syntax error. As Reason editor integration improves this should no longer be necessary.
+If the first error message in the file is 'Invalid token', you're dealing with a syntax error. If take a look at the terminal output of the `yarn start`/`npm start` command you should see a more helpful error message, including the file, line, and character position of the error. As Reason editor integration improves this should no longer be necessary.
 </aside>
 
 ### A record type
@@ -300,25 +298,30 @@ render: fun () self => {
 }
 ```
 
-Don't worry about understanding what `Js.Json.parseExn` does or the weird `{js| |js}` thing (that's an alternative [string literal syntax which don't require escaping quotes](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_annotations_for_unicode_and_js_ffi_support)). The important thing is that when you return to the browser you should see the page sucessfully render from this JSON input.
+Don't worry about understanding what `Js.Json.parseExn` does or the weird `{js| |js}` thing (it's an alternative [string literal syntax which doesn't require escaping quotes](http://bucklescript.github.io/bucklescript/Manual.html#_bucklescript_annotations_for_unicode_and_js_ffi_support)). Returning to the browser you should see the page sucessfully render from this JSON input.
 
 ### Fetching data
 
 ```reason
+let reposUrl = "https://api.github.com/search/repositories?q=topic%3Areasonml&type=Repositories";
 
-let fetchStoryWithComments id callback =>
-  Js.Promise.(
-    Bs_fetch.fetch (storyUrl id) |> then_ Bs_fetch.Response.text |>
-    then_ (
-      fun text =>
-        Js.Json.parseExn text |> parseStoryWithComments |> (
-          fun stories => {
-            callback stories;
-            resolve None
-          }
-        )
-    )
-  );
+let parseReposJsonText jsonText =>
+  Js.Promise.resolve (parseRepos (Js.Json.parseExn jsonText))
+
+let fetchRepos () =>
+  Bs_fetch.fetch (reposUrl id)
+    |> Js.Promise.then_ Bs_fetch.Response.text
+    |> Js.Promise.then_ (fun jsonText =>
+      jsonText
+        |> Js.Json.parseExn
+        |> parseRepos
+        |> Js.Promise.resolve);
+
+fetchRepos ()
+  |> Js.Promise.then_ (fun repos => {
+      setState prevState => {...prevState, repos}
+      Js.Promise.resolve ()
+    })
 ```
 
 
